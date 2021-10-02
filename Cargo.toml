@@ -1,7 +1,13 @@
 [package]
 name = "doson"
 version = "0.1.0"
+description = "Dorea Data Struct Parser"
+repository = "https://github.com/doreadb/doson/"
+authors = ["ZhuoEr Liu <mrxzx@qq.com>"]
+license = "Apache License 2.0"
+keywords = ["json","parser","structure"]
 edition = "2018"
+
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
