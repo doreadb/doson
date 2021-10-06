@@ -1,6 +1,6 @@
 [package]
 name = "doson"
-version = "0.1.1"
+version = "0.1.2"
 description = "Dorea Data Struct Parser"
 repository = "https://github.com/doreadb/doson/"
 authors = ["ZhuoEr Liu <mrxzx@qq.com>"]
@@ -11,5 +11,6 @@ edition = "2018"
 
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0.68"
 nom = "7.0.0"
 base64 = "0.13.0"

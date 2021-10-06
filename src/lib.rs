@@ -204,6 +204,10 @@ impl DataValue {
         }
     }
 
+    pub fn to_json(&self) -> String {
+        serde_json::to_string(&self).unwrap_or(String::from("None"))
+    }
+
     // 数据权值计算
     // Number(f64) 的权值等于它本身
     // 其他基本类型的权值为 f64::MAX
@@ -518,5 +522,19 @@ mod test {
                 ))
             ))
         );
+    }
+
+    #[test]
+    fn to_json() {
+        let value = DataValue::List(vec![
+            DataValue::Number(1.0),
+            DataValue::Number(2.0),
+            DataValue::Number(3.0)
+        ]);
+        
+        assert_eq!(
+            value.to_json(),
+            String::from("{\"List\":[{\"Number\":1.0},{\"Number\":2.0},{\"Number\":3.0}]}")
+        )
     }
 }
