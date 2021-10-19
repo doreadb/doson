@@ -18,7 +18,9 @@
 //!
 //! ```
 
+mod binary;
 
+use binary::Binary;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -98,6 +100,8 @@ pub enum DataValue {
     /// );
     /// ```
     Tuple((Box<DataValue>, Box<DataValue>)),
+
+    Binary(binary::Binary),
 }
 
 impl std::string::ToString for DataValue {
@@ -141,6 +145,9 @@ impl std::string::ToString for DataValue {
                 let second = v.1.to_string();
 
                 format!("({},{})", first, second)
+            },
+            DataValue::Binary(v) => {
+                v.to_string()
             }
         }
     }
@@ -286,6 +293,7 @@ impl DataValue {
             }
 
             DataValue::Tuple(tuple) => tuple.0.size() + tuple.1.size(),
+            DataValue::Binary(bin) => bin.size(),
         }
     }
 
@@ -298,6 +306,7 @@ impl DataValue {
             DataValue::List(_) => "List",
             DataValue::Dict(_) => "Dict",
             DataValue::Tuple(_) => "Tuple",
+            DataValue::Binary(_) => "Binary",
         }.to_string();
     }
 
@@ -393,6 +402,10 @@ impl ValueParser {
                 delimited(tag("\""), ValueParser::string_format, tag("\"")),
             )),
         )(message)
+    }
+
+    fn parse_binary(message: &str) -> IResult<&str, Binary> {
+        todo!()
     }
 
     fn parse_number(message: &str) -> IResult<&str, f64> {
