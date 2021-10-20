@@ -24,17 +24,7 @@ use binary::Binary;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use nom::{
-    branch::alt,
-    bytes::complete::{escaped, tag, tag_no_case, take_till1, take_while_m_n},
-    character::complete::multispace0,
-    combinator::{map, peek, value as n_value},
-    error::context,
-    multi::separated_list0,
-    number::complete::double,
-    sequence::{delimited, preceded, separated_pair},
-    IResult,
-};
+use nom::{IResult, branch::alt, bytes::complete::{escaped, tag, tag_no_case, take_till1, take_while_m_n}, character::complete::{alphanumeric0, multispace0}, combinator::{map, peek, value as n_value}, error::context, multi::separated_list0, number::complete::double, sequence::{delimited, preceded, separated_pair}};
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -405,7 +395,19 @@ impl ValueParser {
     }
 
     fn parse_binary(message: &str) -> IResult<&str, Binary> {
-        todo!()
+        
+        let result: (&str, &str) = context(
+            "binary", 
+            alt((
+                tag("binary!()"),
+                delimited(tag("binary!("), alphanumeric0, tag(")"))
+            ))
+        )(message)?;
+
+        Ok((
+            result.0, 
+            Binary::from_b64(result.1.to_string()).unwrap_or(Binary::build(vec![]))
+        ))
     }
 
     fn parse_number(message: &str) -> IResult<&str, f64> {
@@ -491,6 +493,7 @@ impl ValueParser {
                     map(ValueParser::parse_list, DataValue::List),
                     map(ValueParser::parse_dict, DataValue::Dict),
                     map(ValueParser::parse_tuple, DataValue::Tuple),
+                    map(ValueParser::parse_binary, DataValue::Binary)
                 )),
                 multispace0,
             ),
@@ -535,6 +538,15 @@ mod test {
                 ))
             ))
         );
+    }
+
+    #[test]
+    fn binary() {
+        let message = "binary!(DOREASERVERTEST)";
+        assert_eq!(
+            message,
+            "DOREASERVERTEST",
+        )
     }
 
     #[test]

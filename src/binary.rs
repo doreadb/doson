@@ -27,8 +27,13 @@ impl Binary {
         );
     }
 
-    pub fn from_b64() -> anyhow::Result<Self> {
-        todo!()
+    pub fn from_b64(value: String) -> anyhow::Result<Self> {
+        let data = base64::decode(value)?;
+        return Ok (
+            Self {
+                data
+            }
+        );
     }
 
     pub fn size(&self) -> usize {
