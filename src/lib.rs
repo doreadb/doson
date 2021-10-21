@@ -18,7 +18,7 @@
 //!
 //! ```
 
-mod binary;
+pub mod binary;
 
 use binary::Binary;
 use serde::{Deserialize, Serialize};
