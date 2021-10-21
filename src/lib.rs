@@ -221,6 +221,10 @@ impl DataValue {
         }
     }
 
+    pub fn from_json(data: &str) -> Self {
+        serde_json::from_str(data).unwrap_or(Self::None)
+    }
+
     pub fn to_json(&self) -> String {
         serde_json::to_string(&self).unwrap_or(String::from("None"))
     }
