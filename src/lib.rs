@@ -24,7 +24,13 @@ use binary::Binary;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
-use nom::{IResult, branch::alt, bytes::complete::{escaped, tag, tag_no_case, take_till1, take_while_m_n}, character::complete::{alphanumeric0, multispace0}, combinator::{map, peek, value as n_value}, error::context, multi::separated_list0, number::complete::double, sequence::{delimited, preceded, separated_pair}};
+use nom::{
+    IResult, branch::alt, 
+    bytes::complete::{escaped, tag, tag_no_case, take_till1, take_while_m_n}, 
+    character::complete::multispace0, combinator::{map, peek, value as n_value}, 
+    error::context, multi::separated_list0, number::complete::double, 
+    sequence::{delimited, preceded, separated_pair}
+};
 use std::cmp::Ordering;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

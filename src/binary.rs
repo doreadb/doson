@@ -40,6 +40,10 @@ impl Binary {
         return self.data.len();
     }
 
+    pub fn read(&self) -> Vec<u8> {
+        return self.data.clone();
+    }
+
 }
 
 impl ToString for Binary {
