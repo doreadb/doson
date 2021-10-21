@@ -400,7 +400,11 @@ impl ValueParser {
             "binary", 
             alt((
                 tag("binary!()"),
-                delimited(tag("binary!("), alphanumeric0, tag(")"))
+                delimited(
+                    tag("binary!("), 
+                    take_till1(|c: char| c == '\\' || c == ')' || c.is_ascii_control()), 
+                    tag(")")
+                )
             ))
         )(message)?;
 
@@ -504,7 +508,7 @@ impl ValueParser {
 #[cfg(test)]
 mod test {
 
-    use crate::{DataValue, ValueParser};
+    use crate::{DataValue, ValueParser, binary::Binary};
 
     #[test]
     fn list() {
@@ -542,10 +546,16 @@ mod test {
 
     #[test]
     fn binary() {
-        let message = "binary!(DOREASERVERTEST)";
+        let message = "binary!(SGVsbG8gV29ybGQ=)";
         assert_eq!(
-            message,
-            "DOREASERVERTEST",
+            ValueParser::parse(message),
+            Ok(
+                (
+                    "", DataValue::Binary(Binary::build(
+                        [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100].to_vec()
+                    ))
+                )
+            )
         )
     }
 
