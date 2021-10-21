@@ -1,6 +1,6 @@
 [package]
 name = "doson"
-version = "0.1.41"
+version = "0.1.5"
 description = "Dorea Data Struct Parser"
 repository = "https://github.com/doreadb/doson/"
 authors = ["ZhuoEr Liu <mrxzx@qq.com>"]
