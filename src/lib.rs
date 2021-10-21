@@ -91,6 +91,26 @@ pub enum DataValue {
     /// ```
     Tuple((Box<DataValue>, Box<DataValue>)),
 
+    /// Binary Value
+    /// 
+    /// ```
+    /// use doson::DataValue;
+    /// use doson::binary::Binary;
+    /// 
+    /// DataValue::Binary(
+    ///     Binary::build(vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100])
+    /// )
+    /// 
+    /// // or
+    /// 
+    /// let from_base64: = "SGVsbG8gV29ybGQ=";
+    /// 
+    /// DataValue::Binary(
+    ///     Binary::from_base64(from_base64)
+    /// )
+    /// 
+    /// ```
+    /// 
     Binary(binary::Binary),
 }
 
