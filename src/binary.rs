@@ -1,53 +1,43 @@
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
 
+use base64::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Binary {
-    data: Vec<u8>
+    data: Vec<u8>,
 }
 
 impl Binary {
-    
     /// 使用 Vec<U8> 构造二进制数据集
     pub fn build(data: Vec<u8>) -> Self {
-        Self {
-            data
-        }
+        Self { data }
     }
 
     /// 通过文件读取直接构造二进制数据集
     pub fn from_file(path: PathBuf) -> anyhow::Result<Self> {
         let data = fs::read(path)?;
-        return Ok (
-            Self {
-                data
-            }
-        );
+        Ok(Self { data })
     }
 
     pub fn from_b64(value: String) -> anyhow::Result<Self> {
-        let data = base64::decode(value)?;
-        return Ok (
-            Self {
-                data
-            }
-        );
+        let data = BASE64_STANDARD.decode(value)?;
+        Ok(Self { data })
     }
 
     pub fn size(&self) -> usize {
-        return self.data.len();
+        self.data.len()
     }
 
     pub fn read(&self) -> Vec<u8> {
-        return self.data.clone();
-    }
-
-}
-
-impl ToString for Binary {
-    fn to_string(&self) -> String {
-        format!("binary!({})",base64::encode(self.data.clone()))
+        self.data.clone()
     }
 }
+
+impl std::fmt::Display for Binary {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "binary!({})", BASE64_STANDARD.encode(&self.data))
+    }
+}
+

@@ -25,11 +25,15 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 use nom::{
-    IResult, branch::alt, 
-    bytes::complete::{escaped, tag, tag_no_case, take_till1, take_while_m_n}, 
-    character::complete::multispace0, combinator::{map, peek, value as n_value}, 
-    error::context, multi::separated_list0, number::complete::double, 
-    sequence::{delimited, preceded, separated_pair}
+    branch::alt,
+    bytes::complete::{escaped, tag, tag_no_case, take_till1, take_while_m_n},
+    character::complete::multispace0,
+    combinator::{map, peek, value as n_value},
+    error::context,
+    multi::separated_list0,
+    number::complete::double,
+    sequence::{delimited, preceded, separated_pair},
+    IResult,
 };
 use std::cmp::Ordering;
 
@@ -98,80 +102,56 @@ pub enum DataValue {
     Tuple((Box<DataValue>, Box<DataValue>)),
 
     /// Binary Value
-    /// 
+    ///
     /// ```
     /// use doson::DataValue;
     /// use doson::binary::Binary;
-    /// 
-    /// DataValue::Binary(
+    ///
+    /// let v = DataValue::Binary(
     ///     Binary::build(vec![72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100])
-    /// )
-    /// 
-    /// // or
-    /// 
-    /// let from_base64: = "SGVsbG8gV29ybGQ=";
-    /// 
-    /// DataValue::Binary(
-    ///     Binary::from_base64(from_base64)
-    /// )
-    /// 
+    /// );
     /// ```
-    /// 
+    ///
     Binary(binary::Binary),
 }
 
-impl std::string::ToString for DataValue {
-    fn to_string(&self) -> String {
+impl std::fmt::Display for DataValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            DataValue::None => "none".to_string(),
-            DataValue::String(s) => format!("\"{}\"", s),
-            DataValue::Number(n) => n.to_string(),
-            DataValue::Boolean(bool) => match bool {
-                true => "true".to_string(),
-                false => "false".to_string(),
-            },
+            DataValue::None => write!(f, "none"),
+            DataValue::String(s) => {
+                let escaped = s
+                    .replace('\\', "\\\\")
+                    .replace('"', "\\\"")
+                    .replace('\n', "\\n")
+                    .replace('\r', "\\r")
+                    .replace('\t', "\\t");
+                write!(f, "\"{}\"", escaped)
+            }
+            DataValue::Number(n) => write!(f, "{}", n),
+            DataValue::Boolean(bool) => write!(f, "{}", if *bool { "true" } else { "false" }),
             DataValue::List(l) => {
-                let mut res = String::from("[");
-
-                for v in l {
-                    res += &format!("{},", v.to_string());
-                }
-
-                if res.len() > 1 { res = res[..res.len() - 1].to_string(); }
-
-                res += "]";
-
-                res
+                let formatted_list: Vec<String> = l.iter().map(|v| v.to_string()).collect();
+                write!(f, "[{}]", formatted_list.join(","))
             }
             DataValue::Dict(d) => {
-                let mut res = String::from("{");
-
-                for v in d {
-                    res += &format!("\"{}\":{},", v.0, v.1.to_string());
-                }
-
-                if res.len() > 1 { res = res[..res.len() - 1].to_string(); }
-
-                res += "}";
-
-                res
+                let formatted_dict: Vec<String> = d
+                    .iter()
+                    .map(|(key, value)| format!("\"{}\":{}", key, value))
+                    .collect();
+                write!(f, "{{{}}}", formatted_dict.join(","))
             }
-            DataValue::Tuple(v) => {
-                let first = v.0.to_string();
-                let second = v.1.to_string();
-
-                format!("({},{})", first, second)
-            },
-            DataValue::Binary(v) => {
-                v.to_string()
-            }
+            DataValue::Tuple(v) => write!(f, "({}, {})", v.0, v.1),
+            DataValue::Binary(v) => write!(f, "{}", v),
         }
     }
 }
 
 impl std::cmp::Ord for DataValue {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.weight().partial_cmp(&other.weight()).unwrap_or(Ordering::Equal)
+        self.weight()
+            .partial_cmp(&other.weight())
+            .unwrap_or(Ordering::Equal)
     }
 }
 
@@ -190,7 +170,6 @@ impl std::cmp::PartialEq for DataValue {
 impl std::cmp::Eq for DataValue {}
 
 impl DataValue {
-
     /// parse `&str` to `DataValue` type:
     /// - String: "xxx"
     /// - Number: 114514
@@ -211,17 +190,7 @@ impl DataValue {
     /// );
     /// ```
     pub fn from(data: &str) -> Self {
-
-        let mut data = data.to_string();
-        if data.len() >= 3 {
-            if &data[0..2] == "b:" && &data[data.len() - 1..] == ":" {
-                let temp = &data[2 .. data.len() - 1];
-                let temp = base64::decode(temp).unwrap_or(vec![]);
-                data = String::from_utf8(temp).unwrap_or(String::new());
-            }
-        }
-
-        match ValueParser::parse(&data) {
+        match ValueParser::parse(data) {
             Ok((_, v)) => v,
             Err(_) => Self::None,
         }
@@ -241,7 +210,6 @@ impl DataValue {
     // 复合类型则会进行递归计算
     // 权值主要用于排序等操作
     pub fn weight(&self) -> f64 {
-
         if let DataValue::Number(n) = self {
             return *n;
         }
@@ -251,7 +219,9 @@ impl DataValue {
             let mut total = 0_f64;
             for item in l {
                 let mut temp = item.weight();
-                if temp == f64::MAX { temp = 0_f64; }
+                if temp == f64::MAX {
+                    temp = 0_f64;
+                }
                 total += temp;
             }
             return total;
@@ -259,9 +229,11 @@ impl DataValue {
 
         if let DataValue::Dict(d) = self {
             let mut total = 0_f64;
-            for (_, item) in d {
+            for item in d.values() {
                 let mut temp = item.weight();
-                if temp == f64::MAX { temp = 0_f64; }
+                if temp == f64::MAX {
+                    temp = 0_f64;
+                }
                 total += temp;
             }
             return total;
@@ -272,12 +244,16 @@ impl DataValue {
 
             // 元组值0
             let mut temp = v.0.weight();
-            if temp == f64::MAX { temp = 0_f64; }
+            if temp == f64::MAX {
+                temp = 0_f64;
+            }
             total += temp;
 
             // 元组值1
             let mut temp = v.1.weight();
-            if temp == f64::MAX { temp = 0_f64; }
+            if temp == f64::MAX {
+                temp = 0_f64;
+            }
             total += temp;
 
             return total;
@@ -318,7 +294,7 @@ impl DataValue {
     }
 
     pub fn datatype(&self) -> String {
-        return match self {
+        match self {
             DataValue::None => "None",
             DataValue::String(_) => "String",
             DataValue::Number(_) => "Number",
@@ -327,57 +303,89 @@ impl DataValue {
             DataValue::Dict(_) => "Dict",
             DataValue::Tuple(_) => "Tuple",
             DataValue::Binary(_) => "Binary",
-        }.to_string();
+        }
+        .to_string()
     }
 
     pub fn as_string(&self) -> Option<String> {
-        return match self {
+        match self {
             DataValue::String(val) => Some(val.to_string()),
-            _ => None
+            _ => None,
         }
     }
-
 
     pub fn as_number(&self) -> Option<f64> {
-        return match self {
+        match self {
             DataValue::Number(val) => Some(*val),
-            _ => None
+            _ => None,
         }
     }
 
-
     pub fn as_bool(&self) -> Option<bool> {
-        return match self {
+        match self {
             DataValue::Boolean(val) => Some(*val),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn as_tuple(&self) -> Option<(Box<DataValue>, Box<DataValue>)> {
-        return match self {
+        match self {
             DataValue::Tuple(val) => Some(val.clone()),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn as_list(&self) -> Option<Vec<DataValue>> {
-        return match self {
+        match self {
             DataValue::List(val) => Some(val.clone()),
-            _ => None
+            _ => None,
         }
     }
 
     pub fn as_dict(&self) -> Option<HashMap<String, DataValue>> {
-        return match self {
+        match self {
             DataValue::Dict(val) => Some(val.clone()),
-            _ => None
+            _ => None,
         }
     }
-
 }
 
 struct ValueParser {}
 impl ValueParser {
+    fn unescape_string(s: &str) -> String {
+        let mut result = String::with_capacity(s.len());
+        let mut chars = s.chars().peekable();
+        while let Some(ch) = chars.next() {
+            if ch == '\\' {
+                match chars.next() {
+                    Some('"') => result.push('"'),
+                    Some('\\') => result.push('\\'),
+                    Some('/') => result.push('/'),
+                    Some('b') => result.push('\x08'),
+                    Some('f') => result.push('\x0C'),
+                    Some('n') => result.push('\n'),
+                    Some('r') => result.push('\r'),
+                    Some('t') => result.push('\t'),
+                    Some('u') => {
+                        let hex: String = chars.by_ref().take(4).collect();
+                        if let Ok(code) = u32::from_str_radix(&hex, 16) {
+                            if let Some(c) = char::from_u32(code) {
+                                result.push(c);
+                            }
+                        }
+                    }
+                    Some(other) => {
+                        result.push('\\');
+                        result.push(other);
+                    }
+                    None => result.push('\\'),
+                }
+            } else {
+                result.push(ch);
+            }
+        }
+        result
+    }
 
     fn normal(message: &str) -> IResult<&str, &str> {
         take_till1(|c: char| c == '\\' || c == '"' || c.is_ascii_control())(message)
@@ -425,22 +433,21 @@ impl ValueParser {
     }
 
     fn parse_binary(message: &str) -> IResult<&str, Binary> {
-        
         let result: (&str, &str) = context(
-            "binary", 
+            "binary",
             alt((
                 tag("binary!()"),
                 delimited(
-                    tag("binary!("), 
-                    take_till1(|c: char| c == '\\' || c == ')' || c.is_ascii_control()), 
-                    tag(")")
-                )
-            ))
+                    tag("binary!("),
+                    take_till1(|c: char| c == '\\' || c == ')' || c.is_ascii_control()),
+                    tag(")"),
+                ),
+            )),
         )(message)?;
 
         Ok((
-            result.0, 
-            Binary::from_b64(result.1.to_string()).unwrap_or(Binary::build(vec![]))
+            result.0,
+            Binary::from_b64(result.1.to_string()).unwrap_or(Binary::build(vec![])),
         ))
     }
 
@@ -485,7 +492,7 @@ impl ValueParser {
                     |tuple_vec: Vec<(&str, DataValue)>| {
                         tuple_vec
                             .into_iter()
-                            .map(|(k, v)| (String::from(k), v))
+                            .map(|(k, v)| (ValueParser::unescape_string(k), v))
                             .collect()
                     },
                 ),
@@ -513,7 +520,6 @@ impl ValueParser {
     }
 
     fn parse(message: &str) -> IResult<&str, DataValue> {
-
         context(
             "value",
             delimited(
@@ -522,23 +528,23 @@ impl ValueParser {
                     map(ValueParser::parse_number, DataValue::Number),
                     map(ValueParser::parse_boolean, DataValue::Boolean),
                     map(ValueParser::parse_string, |s| {
-                        DataValue::String(String::from(s))
+                        DataValue::String(ValueParser::unescape_string(s))
                     }),
                     map(ValueParser::parse_list, DataValue::List),
                     map(ValueParser::parse_dict, DataValue::Dict),
                     map(ValueParser::parse_tuple, DataValue::Tuple),
-                    map(ValueParser::parse_binary, DataValue::Binary)
+                    map(ValueParser::parse_binary, DataValue::Binary),
                 )),
                 multispace0,
             ),
-        )(&message)
+        )(message)
     }
 }
 
 #[cfg(test)]
 mod test {
 
-    use crate::{DataValue, ValueParser, binary::Binary};
+    use crate::{binary::Binary, DataValue, ValueParser};
 
     #[test]
     fn list() {
@@ -579,13 +585,12 @@ mod test {
         let message = "binary!(SGVsbG8gV29ybGQ=)";
         assert_eq!(
             ValueParser::parse(message),
-            Ok(
-                (
-                    "", DataValue::Binary(Binary::build(
-                        [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100].to_vec()
-                    ))
-                )
-            )
+            Ok((
+                "",
+                DataValue::Binary(Binary::build(
+                    [72, 101, 108, 108, 111, 32, 87, 111, 114, 108, 100].to_vec()
+                ))
+            ))
         )
     }
 
@@ -594,12 +599,35 @@ mod test {
         let value = DataValue::List(vec![
             DataValue::Number(1.0),
             DataValue::Number(2.0),
-            DataValue::Number(3.0)
+            DataValue::Number(3.0),
         ]);
-        
+
         assert_eq!(
             value.to_json(),
             String::from("{\"List\":[{\"Number\":1.0},{\"Number\":2.0},{\"Number\":3.0}]}")
         )
+    }
+
+    #[test]
+    fn string_roundtrip() {
+        // 含引号
+        let v = DataValue::String("say \"hello\"".to_string());
+        assert_eq!(DataValue::from(&v.to_string()), v);
+
+        // 含反斜杠
+        let v = DataValue::String("path\\to\\file".to_string());
+        assert_eq!(DataValue::from(&v.to_string()), v);
+
+        // 含换行
+        let v = DataValue::String("line1\nline2".to_string());
+        assert_eq!(DataValue::from(&v.to_string()), v);
+
+        // 含制表符
+        let v = DataValue::String("col1\tcol2".to_string());
+        assert_eq!(DataValue::from(&v.to_string()), v);
+
+        // 混合特殊字符
+        let v = DataValue::String("a\\b\"c\td\ne".to_string());
+        assert_eq!(DataValue::from(&v.to_string()), v);
     }
 }
